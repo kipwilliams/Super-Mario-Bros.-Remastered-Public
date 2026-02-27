@@ -581,6 +581,11 @@ func handle_p_meter(delta: float) -> void:
 		p_meter_full = false
 		p_meter_emptied.emit()
 
+func get_effective_run_speed() -> float:
+	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled:
+		return Global.current_level.p_meter_boost_speed
+	return RUN_SPEED
+
 func damage() -> void:
 	if can_hurt == false or is_invincible:
 		return

@@ -98,7 +98,7 @@ func ground_acceleration(delta: float) -> void:
 		target_move_speed = player.SWIM_GROUND_SPEED
 	var target_accel := player.GROUND_WALK_ACCEL
 	if (Global.player_action_pressed("run", player.player_id) and abs(player.velocity.x) >= player.WALK_SPEED) and (not player.in_water and player.flight_meter <= 0) and player.can_run:
-		target_move_speed = player.RUN_SPEED
+		target_move_speed = player.get_effective_run_speed()
 		target_accel = player.GROUND_RUN_ACCEL
 	if player.input_direction != player.velocity_direction:
 		if Global.player_action_pressed("run", player.player_id) and player.can_run:
@@ -141,7 +141,7 @@ func handle_air_movement(delta: float) -> void:
 func air_acceleration(delta: float) -> void:
 	var target_speed = player.WALK_SPEED
 	if abs(player.velocity.x) >= player.WALK_SPEED and Global.player_action_pressed("run", player.player_id) and player.can_run:
-		target_speed = player.RUN_SPEED
+		target_speed = player.get_effective_run_speed()
 	player.velocity.x = move_toward(player.velocity.x, target_speed * player.input_direction, (player.AIR_ACCEL / delta) * delta)
 
 func air_skid(delta: float) -> void:

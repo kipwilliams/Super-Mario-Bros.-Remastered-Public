@@ -11,7 +11,7 @@ metadata/_custom_type_script = "uid://pmeter_setter_gd"
 
 [node name="EditorPropertyExposer" type="Node" parent="."]
 script = ExtResource("2_pmstr")
-properties = Array[String](["p_power_amount"])
+properties = Array[String](["operation", "p_power_amount"])
 metadata/_custom_type_script = "uid://ctfbuoxtnnl0q"
 
 [node name="LevelEditorVisibleNode" type="Node2D" parent="."]

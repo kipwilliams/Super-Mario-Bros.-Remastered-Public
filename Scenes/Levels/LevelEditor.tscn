@@ -4841,6 +4841,24 @@ max_value = 50.0
 value = 10.0
 script = ExtResource("204_idval")
 
+[node name="HBoxContainerPMeterBoost" type="HBoxContainer" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeterBoost"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LEVEL_SETTINGS_PMETER_BOOST"
+uppercase = true
+
+[node name="PMeterBoostSpeed" type="SpinBox" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeterBoost"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+min_value = 160.0
+max_value = 500.0
+value = 200.0
+script = ExtResource("204_idval")
+
 [node name="BG" type="MarginContainer" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer"]
 visible = false
 layout_mode = 2
@@ -5407,6 +5425,7 @@ metadata/_custom_type_script = "uid://dt2p68xl462v2"
 [connection signal="value_changed" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer6/TimeLimit" to="." method="time_limit_changed"]
 [connection signal="toggled" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeter/PMeterEnabled" to="." method="p_meter_enabled_toggled"]
 [connection signal="value_changed" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeterSpeed/PMeterFillSpeed" to="." method="p_meter_fill_speed_changed"]
+[connection signal="value_changed" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeterBoost/PMeterBoostSpeed" to="." method="p_meter_boost_speed_changed"]
 [connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/BG/ScrollContainer/VBoxContainer/HBoxContainer/PrimaryLayer" to="Level/LevelBG" method="set_value" binds= ["primary_layer"]]
 [connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/BG/ScrollContainer/VBoxContainer/HBoxContainer2/SecondLayer" to="Level/LevelBG" method="set_value" binds= ["second_layer"]]
 [connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/BG/ScrollContainer/VBoxContainer/HBoxContainer7/SecondLayerOrder" to="Level/LevelBG" method="set_value" binds= ["second_layer_order"]]
