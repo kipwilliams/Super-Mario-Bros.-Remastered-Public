@@ -72,7 +72,7 @@ const BONUS_ROOMS := {
 
 @export var p_meter_enabled := false
 @export var p_meter_fill_speed := 1.0
-@export var p_meter_boost_speed := 200.0
+@export var p_meter_boost_multiplier := 150
 
 static var next_world := 1
 static var next_level := 2

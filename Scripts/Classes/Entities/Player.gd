@@ -569,11 +569,14 @@ func handle_p_meter(delta: float) -> void:
 	if not is_instance_valid(Global.current_level) or not Global.current_level.p_meter_enabled:
 		return
 	var fill_speed: float = Global.current_level.p_meter_fill_speed
-	var running_on_ground: bool = is_actually_on_floor() and abs(velocity.x) >= RUN_SPEED - 1 and not in_water
-	if running_on_ground:
-		p_meter = min(p_meter + fill_speed * delta, 1.0)
-	else:
-		p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+	var on_ground: bool = is_actually_on_floor() and not in_water
+	var at_run_speed: bool = abs(velocity.x) >= RUN_SPEED - 1
+	if on_ground:
+		if at_run_speed:
+			p_meter = min(p_meter + fill_speed * delta, 1.0)
+		else:
+			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+	# When airborne: neither fill nor drain — preserve current value
 	if p_meter >= 1.0 and not p_meter_full:
 		p_meter_full = true
 		p_meter_filled.emit()
@@ -583,7 +586,7 @@ func handle_p_meter(delta: float) -> void:
 
 func get_effective_run_speed() -> float:
 	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled:
-		return Global.current_level.p_meter_boost_speed
+		return RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
 	return RUN_SPEED
 
 func damage() -> void:

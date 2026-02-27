@@ -1260,33 +1260,22 @@ region_rect = Rect2(0, 0, 16, 16)
 script = ExtResource("14_h6dkv")
 metadata/_custom_type_script = "uid://xem6lai3ufyj"
 
-[node name="PMeter" type="Control" parent="."]
+[node name="PMeter" type="Control" parent="ModernHUD/TopLeft"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 3
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_top = -20.0
-offset_right = 80.0
-grow_vertical = 0
-
-[node name="PMeterLabel" type="Label" parent="PMeter"]
-unique_name_in_owner = true
-layout_mode = 1
+layout_mode = 0
 anchors_preset = 0
-offset_right = 16.0
-offset_bottom = 10.0
-text = "P"
-uppercase = true
+offset_left = 20.0
+offset_top = 62.0
+offset_right = 56.0
+offset_bottom = 66.0
 
-[node name="PMeterBar" type="ProgressBar" parent="PMeter"]
+[node name="PMeterBar" type="ProgressBar" parent="ModernHUD/TopLeft/PMeter"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 16.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_pmeter_bg")

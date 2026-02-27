@@ -656,7 +656,7 @@ func p_meter_fill_speed_changed(new_value := 0.0) -> void:
 	$Level.p_meter_fill_speed = new_value / 10.0
 
 func p_meter_boost_speed_changed(new_value := 0.0) -> void:
-	$Level.p_meter_boost_speed = new_value
+	$Level.p_meter_boost_multiplier = int(new_value)
 
 func low_gravity_toggled(new_value := false) -> void:
 	Global.entity_gravity = 10 if new_value == false else 5

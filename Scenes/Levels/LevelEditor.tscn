@@ -4847,16 +4847,16 @@ layout_mode = 2
 [node name="Label" type="Label" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeterBoost"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "LEVEL_SETTINGS_PMETER_BOOST"
+text = "LEVEL_SETTINGS_PMETER_BOOST_PERCENT"
 uppercase = true
 
 [node name="PMeterBoostSpeed" type="SpinBox" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainerPMeterBoost"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 10
-min_value = 160.0
-max_value = 500.0
-value = 200.0
+min_value = 100.0
+max_value = 300.0
+value = 150.0
 script = ExtResource("204_idval")
 
 [node name="BG" type="MarginContainer" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer"]
