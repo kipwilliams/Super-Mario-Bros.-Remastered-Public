@@ -29,6 +29,30 @@ var can_air_kick := false
 
 var times_kicked := 0
 
+var holder: Player = null
+
+func get_grabbed(by_player: Player) -> void:
+	holder = by_player
+	by_player.grab_item(self)
+	moving = false
+	wake_meter = 0
+	can_kick = false
+	set_collision_layer_value(6, false)  # Layer 6: Enemy collision (wall/floor interaction)
+	$Hitbox.get_child(0).set_deferred("disabled", true)
+
+func get_thrown(throw_velocity: Vector2) -> void:
+	holder = null
+	velocity = throw_velocity
+	moving = throw_velocity.length() > 0
+	if moving:
+		moving_time = 0.0
+		if abs(throw_velocity.x) > 0:
+			direction = sign(throw_velocity.x)
+	update_hitbox()
+
+const HOLD_OFFSET_X := 12   ## Horizontal distance from player centre while held
+const HOLD_OFFSET_Y := -12  ## Vertical offset above player centre while held
+
 func _ready() -> void:
 	$Sprite.flip_v = flipped
 	if flipped:
@@ -38,11 +62,32 @@ func _ready() -> void:
 	can_kick = true
 	$Hitbox/Collision.set_deferred("disabled", false)
 
+func _clear_holder() -> void:
+	if holder != null and is_instance_valid(holder):
+		holder.held_item = null
+	holder = null
+
+func die() -> void:
+	_clear_holder()
+	super.die()
+
+func die_from_object(obj: Node2D) -> void:
+	_clear_holder()
+	super.die_from_object(obj)
+
+func die_from_hammer(obj: Node2D) -> void:
+	_clear_holder()
+	super.die_from_hammer(obj)
+
 func on_player_stomped_on(stomped_player: Player) -> void:
 	player = stomped_player
 	if can_kick == false:
 		return
 	if not moving:
+		if _can_grab(stomped_player):
+			get_grabbed(stomped_player)
+			stomped_player.enemy_bounce_off(false, false)
+			return
 		direction = sign(global_position.x - stomped_player.global_position.x)
 		kick(stomped_player)
 	else:
@@ -60,10 +105,21 @@ func on_player_hit(hit_player: Player) -> void:
 	if can_kick == false:
 		return 
 	if not moving:
+		if _can_grab(hit_player):
+			get_grabbed(hit_player)
+			return
 		direction = sign(global_position.x - hit_player.global_position.x )
 		kick(hit_player)
 	else:
 		hit_player.damage()
+
+func _can_grab(p: Player) -> bool:
+	return (
+		holder == null
+		and Global.player_action_pressed("run", p.player_id)
+		and Global.current_level != null
+		and Global.current_level.item_grab_enabled
+	)
 		
 func award_score(award_level: int) -> void:
 	if award_level >= 10:
@@ -108,6 +164,10 @@ func kick(hit_player: Player) -> void:
 			die_from_object(hit_player)
 
 func _physics_process(delta: float) -> void:
+	if holder != null:
+		global_position = holder.global_position + Vector2(holder.direction * HOLD_OFFSET_X, HOLD_OFFSET_Y)
+		$Sprite.play("Idle")
+		return
 	handle_movement(delta)
 	handle_waking(delta)
 	handle_block_collision()
@@ -128,6 +188,7 @@ func handle_waking(delta: float) -> void:
 		summon_original_entity()
 
 func summon_original_entity() -> void:
+	_clear_holder()
 	old_entity.global_position = global_position
 	old_entity.times_kicked = times_kicked
 	add_sibling(old_entity)

@@ -609,6 +609,8 @@ func do_i_frames() -> void:
 func die(pit := false) -> void:
 	if ["Dead", "Pipe", "LevelExit"].has(state_machine.state.name):
 		return
+	if held_item != null:
+		release_held_item(false, true)
 	is_dead = true
 	visible = not pit
 	flight_meter = 0
@@ -800,6 +802,8 @@ func get_character_sprite_path(power_stateto_use := power_state.state_name) -> S
 	return path
 
 func enter_pipe(pipe: PipeArea, warp_to_level := true) -> void:
+	if held_item != null:
+		release_held_item(false, true)
 	z_index = -10
 	can_bump_sfx = false
 	Global.can_pause = false
@@ -943,3 +947,27 @@ func reset_camera_to_center() -> void:
 func on_area_exited(area: Area2D) -> void:
 	if area is WaterArea:
 		water_exited()
+
+var held_item: Node2D = null
+
+const THROW_FORWARD_SPEED := 192.0   ## Matches Shell.MOVE_SPEED for a natural throw
+const THROW_UP_SPEED_H    := 50.0    ## Horizontal component when tossing upward (SMW style)
+const THROW_UP_SPEED_V    := -200.0  ## Vertical component when tossing upward (SMW style)
+
+func grab_item(item: Node2D) -> void:
+	held_item = item
+
+func release_held_item(throw_up := false, drop := false) -> void:
+	if held_item == null or not is_instance_valid(held_item) or not held_item.has_method("get_thrown"):
+		held_item = null
+		return
+	var item = held_item
+	held_item = null
+	var throw_vel: Vector2
+	if drop:
+		throw_vel = Vector2.ZERO
+	elif throw_up:
+		throw_vel = Vector2(direction * THROW_UP_SPEED_H, THROW_UP_SPEED_V)
+	else:
+		throw_vel = Vector2(direction * THROW_FORWARD_SPEED, 0.0)
+	item.get_thrown(throw_vel)
