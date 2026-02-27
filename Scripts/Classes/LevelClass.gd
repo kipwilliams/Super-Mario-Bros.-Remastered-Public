@@ -61,7 +61,7 @@ const BONUS_ROOMS := {
 @export var auto_set_theme := false
 
 @export var item_grab_enabled := true
-@export_enum("Mario3", "MarioWorld") var item_throw_style := 0
+@export_enum("ForwardOnly", "ForwardAndUp") var item_throw_style := 0
 
 @export var time_limit := 400
 

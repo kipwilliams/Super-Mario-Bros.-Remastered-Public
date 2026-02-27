@@ -1,7 +1,7 @@
 extends Node
 
 @export var grab_enabled := true
-@export_enum("Mario3", "MarioWorld") var throw_style := 0
+@export_enum("ForwardOnly", "ForwardAndUp") var throw_style := 0
 
 func _ready() -> void:
 	if Global.current_level != null:
