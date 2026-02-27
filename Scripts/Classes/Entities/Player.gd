@@ -571,12 +571,17 @@ func handle_p_meter(delta: float) -> void:
 	var fill_speed: float = Global.current_level.p_meter_fill_speed
 	var on_ground: bool = is_actually_on_floor() and not in_water
 	var at_run_speed: bool = abs(velocity.x) >= RUN_SPEED - 1
+	# Drain if not pressing forward or pressing against current movement direction
+	var should_drain_airborne: bool = input_direction == 0 or (velocity.x != 0.0 and sign(input_direction) != sign(velocity.x))
 	if on_ground:
 		if at_run_speed:
 			p_meter = min(p_meter + fill_speed * delta, 1.0)
 		else:
 			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
-	# When airborne: neither fill nor drain — preserve current value
+	elif should_drain_airborne:
+		# Airborne but not pressing forward or pushing backwards: drain
+		p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+	# Airborne and pressing forward: preserve current value
 	if p_meter >= 1.0 and not p_meter_full:
 		p_meter_full = true
 		p_meter_filled.emit()
