@@ -168,7 +168,7 @@ func kick(hit_player: Player) -> void:
 
 func _physics_process(delta: float) -> void:
 	if holder != null:
-		global_position = holder.global_position + Vector2(holder.direction * HOLD_OFFSET_X, HOLD_OFFSET_Y)
+		global_position = holder.global_position + Vector2(holder.direction * HOLD_OFFSET_X, HOLD_OFFSET_Y * holder.gravity_vector.y)
 		$Sprite.play("Idle")
 		return
 	handle_movement(delta)

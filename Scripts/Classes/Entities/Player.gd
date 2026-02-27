@@ -978,7 +978,7 @@ func release_held_item(throw_up := false, drop := false) -> void:
 	if drop:
 		throw_vel = Vector2.ZERO
 	elif throw_up:
-		throw_vel = Vector2(direction * THROW_UP_SPEED_H, THROW_UP_SPEED_V)
+		throw_vel = Vector2(direction * THROW_UP_SPEED_H, THROW_UP_SPEED_V * gravity_vector.y)
 	else:
 		throw_vel = Vector2(direction * THROW_FORWARD_SPEED, 0.0)
 	item.get_thrown(throw_vel)
