@@ -4810,6 +4810,40 @@ max_value = 999.0
 value = 400.0
 script = ExtResource("204_idval")
 
+[node name="HBoxContainer9" type="HBoxContainer" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer9"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LEVEL_SETTINGS_ITEM_GRAB"
+uppercase = true
+
+[node name="ItemGrabEnabled" type="CheckBox" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer9"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+button_pressed = true
+
+[node name="HBoxContainer10" type="HBoxContainer" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer10"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LEVEL_SETTINGS_THROW_STYLE"
+uppercase = true
+
+[node name="ThrowStyle" type="OptionButton" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer10"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+item_count = 2
+popup/item_0/text = "FORWARDONLY"
+popup/item_0/id = 0
+popup/item_1/text = "FORWARDANDUP"
+popup/item_1/id = 1
+
 [node name="BG" type="MarginContainer" parent="TileMenu/MarginContainer/VBoxContainer/PanelContainer"]
 visible = false
 layout_mode = 2
@@ -5374,6 +5408,8 @@ metadata/_custom_type_script = "uid://dt2p68xl462v2"
 [connection signal="toggled" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer3/BackScroll" to="." method="backscroll_toggled"]
 [connection signal="value_changed" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer4/HeightLimit" to="." method="height_limit_changed"]
 [connection signal="value_changed" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer6/TimeLimit" to="." method="time_limit_changed"]
+[connection signal="toggled" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer9/ItemGrabEnabled" to="." method="item_grab_toggled"]
+[connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/LEVEL/ScrollContainer/VBoxContainer/HBoxContainer10/ThrowStyle" to="." method="throw_style_selected"]
 [connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/BG/ScrollContainer/VBoxContainer/HBoxContainer/PrimaryLayer" to="Level/LevelBG" method="set_value" binds= ["primary_layer"]]
 [connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/BG/ScrollContainer/VBoxContainer/HBoxContainer2/SecondLayer" to="Level/LevelBG" method="set_value" binds= ["second_layer"]]
 [connection signal="item_selected" from="TileMenu/MarginContainer/VBoxContainer/PanelContainer/BG/ScrollContainer/VBoxContainer/HBoxContainer7/SecondLayerOrder" to="Level/LevelBG" method="set_value" binds= ["second_layer_order"]]
