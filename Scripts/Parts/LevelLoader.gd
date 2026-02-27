@@ -118,6 +118,9 @@ func apply_level_data(data := "") -> void:
 	level.can_backscroll = bool(values[4])
 	level.vertical_height = -int(values[5])
 	level.time_limit = int(values[6])
+	level.item_grab_enabled = bool(values[7]) if values.size() > 7 else true
+	level.item_throw_style = int(values[8]) if values.size() > 8 else 0
+	level.shell_carry_through_pipe = bool(values[9]) if values.size() > 9 else false
 	if is_instance_valid($TileMenu):
 		%ThemeTime.selected = values[1]
 		%LevelMusic.selected = values[2]
@@ -125,6 +128,9 @@ func apply_level_data(data := "") -> void:
 		%BackScroll.set_pressed_no_signal(bool(values[4]))
 		%HeightLimit.value = values[5]
 		%TimeLimit.value = values[6]
+		%ItemGrabEnabled.set_pressed_no_signal(level.item_grab_enabled)
+		%ThrowStyle.selected = level.item_throw_style
+		%ShellCarryThroughPipe.set_pressed_no_signal(level.shell_carry_through_pipe)
 		%SubLevelID.selected = editor.sub_level_id
 	ResourceSetterNew.cache.clear()
 	Global.level_theme_changed.emit()

@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=3 uid="uid://cgrabsettng2b"]
+
+[ext_resource type="Script" uid="uid://cgrabst1n3a4m" path="res://Scripts/Parts/GrabSettings.gd" id="1_grbs1"]
+[ext_resource type="Script" uid="uid://ctfbuoxtnnl0q" path="res://Scripts/Classes/Components/EditorPropertyExposer.gd" id="2_grbs1"]
+[ext_resource type="Script" uid="uid://cpwloakvp672a" path="res://Scripts/Parts/EditorVisibleNode.gd" id="3_grbs1"]
+[ext_resource type="Texture2D" uid="uid://4fafl7yuo5k0" path="res://Assets/Sprites/Editor/GravityInverter.png" id="4_grbs1"]
+
+[node name="GrabSettingsOBJ" type="Node2D"]
+script = ExtResource("1_grbs1")
+
+[node name="EditorPropertyExposer" type="Node" parent="."]
+script = ExtResource("2_grbs1")
+properties = Array[String](["grab_enabled", "throw_style", "carry_through_pipe"])
+metadata/_custom_type_script = "uid://ctfbuoxtnnl0q"
+
+[node name="LevelEditorVisibleNode" type="Node2D" parent="."]
+script = ExtResource("3_grbs1")
+metadata/_custom_type_script = "uid://cpwloakvp672a"
+
+[node name="Sprite2D" type="Sprite2D" parent="LevelEditorVisibleNode"]
+texture = ExtResource("4_grbs1")

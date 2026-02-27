@@ -18,6 +18,11 @@ func enter(_msg := {}) -> void:
 	jump_queued = false
 
 func physics_update(delta: float) -> void:
+	if player.held_item != null and is_instance_valid(player.held_item) and Global.player_action_just_released("run", player.player_id):
+		var throw_style: int = Global.current_level.item_throw_style if Global.current_level != null else 0
+		var throw_up := throw_style == 1 and Global.player_action_pressed("move_up", player.player_id)
+		var drop := Global.player_action_pressed("move_down", player.player_id)
+		player.release_held_item(throw_up, drop)
 	if player.is_actually_on_floor():
 		grounded(delta)
 	else:
