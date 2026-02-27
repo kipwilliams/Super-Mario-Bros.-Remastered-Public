@@ -802,8 +802,15 @@ func get_character_sprite_path(power_stateto_use := power_state.state_name) -> S
 	return path
 
 func enter_pipe(pipe: PipeArea, warp_to_level := true) -> void:
-	if held_item != null:
-		release_held_item(false, true)
+	var keep_held_item := (
+		held_item != null
+		and is_instance_valid(held_item)
+		and Global.current_level != null
+		and Global.current_level.shell_carry_through_pipe
+	)
+	if not keep_held_item:
+		if held_item != null:
+			release_held_item(false, true)
 	z_index = -10
 	can_bump_sfx = false
 	Global.can_pause = false
@@ -830,6 +837,8 @@ func hide_pipe_animation() -> void:
 	else:
 		await get_tree().create_timer(0.6, false).timeout
 		hide()
+	if held_item != null and is_instance_valid(held_item):
+		held_item.hide()
 
 func go_to_exit_pipe(pipe: PipeArea) -> void:
 	Global.can_time_tick = false
@@ -847,6 +856,8 @@ func go_to_exit_pipe(pipe: PipeArea) -> void:
 
 func exit_pipe(pipe: PipeArea) -> void:
 	show()
+	if held_item != null and is_instance_valid(held_item):
+		held_item.show()
 	pipe_enter_direction = -pipe.get_vector(pipe.enter_direction)
 	AudioManager.play_sfx("pipe", global_position)
 	state_machine.transition_to("Pipe")

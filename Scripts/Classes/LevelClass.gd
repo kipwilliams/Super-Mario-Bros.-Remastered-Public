@@ -62,6 +62,7 @@ const BONUS_ROOMS := {
 
 @export var item_grab_enabled := true
 @export_enum("ForwardOnly", "ForwardAndUp") var item_throw_style := 0
+@export var shell_carry_through_pipe := false
 
 @export var time_limit := 400
 

@@ -10,7 +10,7 @@ script = ExtResource("1_grbs1")
 
 [node name="EditorPropertyExposer" type="Node" parent="."]
 script = ExtResource("2_grbs1")
-properties = Array[String](["grab_enabled", "throw_style"])
+properties = Array[String](["grab_enabled", "throw_style", "carry_through_pipe"])
 metadata/_custom_type_script = "uid://ctfbuoxtnnl0q"
 
 [node name="LevelEditorVisibleNode" type="Node2D" parent="."]

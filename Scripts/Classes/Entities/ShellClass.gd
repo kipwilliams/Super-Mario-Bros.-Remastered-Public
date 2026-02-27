@@ -67,6 +67,9 @@ func _clear_holder() -> void:
 		holder.held_item = null
 	holder = null
 
+func _exit_tree() -> void:
+	_clear_holder()
+
 func die() -> void:
 	_clear_holder()
 	super.die()

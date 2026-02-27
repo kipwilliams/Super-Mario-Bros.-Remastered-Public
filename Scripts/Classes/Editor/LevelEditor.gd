@@ -655,6 +655,9 @@ func item_grab_toggled(new_value := true) -> void:
 func throw_style_selected(new_value := 0) -> void:
 	$Level.item_throw_style = new_value
 
+func shell_carry_pipe_toggled(new_value := false) -> void:
+	$Level.shell_carry_through_pipe = new_value
+
 func low_gravity_toggled(new_value := false) -> void:
 	Global.entity_gravity = 10 if new_value == false else 5
 	for i: Player in get_tree().get_nodes_in_group("Players"):
