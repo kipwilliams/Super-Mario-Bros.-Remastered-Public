@@ -31,6 +31,8 @@ var times_kicked := 0
 
 var holder: Player = null
 
+var own_gravity_dir := 1  ## Gravity direction locked at throw time; -1 keeps shell on ceiling after gravity inverter is removed
+
 func get_grabbed(by_player: Player) -> void:
 	holder = by_player
 	by_player.grab_item(self)
@@ -41,6 +43,8 @@ func get_grabbed(by_player: Player) -> void:
 	$Hitbox.get_child(0).set_deferred("disabled", true)
 
 func get_thrown(throw_velocity: Vector2) -> void:
+	if holder != null:
+		own_gravity_dir = 1 if holder.gravity_vector.y > 0 else -1
 	holder = null
 	velocity = throw_velocity
 	moving = throw_velocity.length() > 0
@@ -222,6 +226,7 @@ func update_hitbox() -> void:
 	can_kick = true
 
 func handle_movement(delta: float) -> void:
+	up_direction = Vector2(0, -own_gravity_dir)
 	set_collision_layer_value(6, not moving)
 	if moving:
 		if is_on_wall():
@@ -233,8 +238,11 @@ func handle_movement(delta: float) -> void:
 		velocity.x = ((speed * direction))
 	elif is_on_floor():
 		velocity.x = 0
-	if is_on_floor() and velocity.y >= 0:
+	if is_on_floor() and velocity.y * own_gravity_dir >= 0:
 		can_air_kick = false
-	velocity.y += (Global.entity_gravity / delta) * delta
-	velocity.y = clamp(velocity.y, -INF, Global.entity_max_fall_speed)
+	velocity.y += Global.entity_gravity * own_gravity_dir
+	if own_gravity_dir > 0:
+		velocity.y = clamp(velocity.y, -INF, Global.entity_max_fall_speed)
+	else:
+		velocity.y = clamp(velocity.y, -Global.entity_max_fall_speed, INF)
 	move_and_slide()
