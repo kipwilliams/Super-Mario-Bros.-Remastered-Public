@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://bod0jkf7jc5pm"]
+[gd_scene load_steps=43 format=3 uid="uid://bod0jkf7jc5pm"]
 
 [ext_resource type="Script" uid="uid://bjbd3a6su47si" path="res://Scripts/Classes/UI/GameHUD.gd" id="1_f34v2"]
 [ext_resource type="Script" uid="uid://caq1qiwmy0mox" path="res://Scripts/Parts/BetterAnimatedSprite.gd" id="2_cbrve"]
@@ -126,6 +126,17 @@ bg_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2w8b3"]
 bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pmeter_bg"]
+bg_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pmeter_fill"]
+bg_color = Color(1, 0.6, 0, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -1248,6 +1259,41 @@ texture = ExtResource("13_40ba1")
 region_rect = Rect2(0, 0, 16, 16)
 script = ExtResource("14_h6dkv")
 metadata/_custom_type_script = "uid://xem6lai3ufyj"
+
+[node name="PMeter" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+offset_right = 80.0
+grow_vertical = 0
+
+[node name="PMeterLabel" type="Label" parent="PMeter"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+offset_right = 16.0
+offset_bottom = 10.0
+text = "P"
+uppercase = true
+
+[node name="PMeterBar" type="ProgressBar" parent="PMeter"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_pmeter_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_pmeter_fill")
+max_value = 100.0
+value = 0.0
+show_percentage = false
 
 [node name="StoryPause" parent="." instance=ExtResource("5_6nbcw")]
 visible = false

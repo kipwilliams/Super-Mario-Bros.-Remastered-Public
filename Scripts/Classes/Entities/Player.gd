@@ -51,6 +51,12 @@ var input_direction := 0
 
 var flight_meter := 0.0
 
+var p_meter := 0.0
+var p_meter_full := false
+
+signal p_meter_filled
+signal p_meter_emptied
+
 var velocity_direction := 1
 var velocity_x_jump_stored := 0
 
@@ -300,6 +306,7 @@ func _physics_process(delta: float) -> void:
 	handle_directions()
 	handle_block_collision_detection()
 	handle_wing_flight(delta)
+	handle_p_meter(delta)
 	air_frames = (air_frames + 1 if is_on_floor() == false else 0)
 	for i in get_tree().get_nodes_in_group("StepCollision"):
 		var on_wall := false
@@ -557,6 +564,22 @@ func handle_wing_flight(delta: float) -> void:
 		%Wings.get_node("AnimationPlayer").play("Flash")
 	else:
 		%Wings.get_node("AnimationPlayer").play("RESET")
+
+func handle_p_meter(delta: float) -> void:
+	if not is_instance_valid(Global.current_level) or not Global.current_level.p_meter_enabled:
+		return
+	var fill_speed: float = Global.current_level.p_meter_fill_speed
+	var running_on_ground: bool = is_actually_on_floor() and abs(velocity.x) >= RUN_SPEED - 1 and not in_water
+	if running_on_ground:
+		p_meter = min(p_meter + fill_speed * delta, 1.0)
+	else:
+		p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+	if p_meter >= 1.0 and not p_meter_full:
+		p_meter_full = true
+		p_meter_filled.emit()
+	elif p_meter <= 0.0 and p_meter_full:
+		p_meter_full = false
+		p_meter_emptied.emit()
 
 func damage() -> void:
 	if can_hurt == false or is_invincible:

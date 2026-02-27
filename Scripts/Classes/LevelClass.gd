@@ -70,6 +70,9 @@ const BONUS_ROOMS := {
 @export var vertical_height := -208
 @export var can_backscroll := false
 
+@export var p_meter_enabled := false
+@export var p_meter_fill_speed := 1.0
+
 static var next_world := 1
 static var next_level := 2
 static var next_level_file_path := ""

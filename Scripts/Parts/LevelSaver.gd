@@ -123,7 +123,7 @@ func encode_to_base64_2char(value: int) -> String:
 
 func save_level_data() -> void:
 	var string := ""
-	for i in [Level.THEME_IDXS.find(level.theme), ["Day", "Night"].find(level.theme_time), editor.bgm_id, ["SMB1", "SMBLL", "SMBS", "SMBANN"].find(level.campaign), level.can_backscroll, abs(level.vertical_height), level.time_limit]:
+	for i in [Level.THEME_IDXS.find(level.theme), ["Day", "Night"].find(level.theme_time), editor.bgm_id, ["SMB1", "SMBLL", "SMBS", "SMBANN"].find(level.campaign), level.can_backscroll, abs(level.vertical_height), level.time_limit, int(level.p_meter_enabled), int(level.p_meter_fill_speed * 10)]:
 		var key := ""
 		if int(i) >= 64:
 			key = encode_to_base64_2char(int(i))
