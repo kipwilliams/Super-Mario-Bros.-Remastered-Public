@@ -55,6 +55,8 @@ var p_meter := 0.0
 var p_meter_full := false
 var p_speed_hold_timer := 0.0
 const P_SPEED_HOLD_TIME := 0.25
+var p_speed_sparkle_timer := 0.0
+var p_speed_music_player: AudioStreamPlayer = null
 
 signal p_meter_filled
 signal p_meter_emptied
@@ -243,6 +245,14 @@ func _ready() -> void:
 	handle_invincible_palette()
 	if Global.level_editor == null:
 		recenter_camera()
+	p_speed_music_player = AudioStreamPlayer.new()
+	p_speed_music_player.bus = "Music"
+	p_speed_music_player.volume_db = linear_to_db(0.25)
+	var p_speed_stream = AudioManager.create_stream_from_json("res://Assets/Audio/BGM/StarMan.json")
+	if p_speed_stream != null:
+		p_speed_music_player.stream = p_speed_stream
+	add_child(p_speed_music_player)
+	p_meter_filled.connect(_on_p_speed_boost_start)
 
 func apply_character_physics(apply: bool) -> void:
 	var path = "res://Assets/Sprites/Players/" + character + "/CharacterInfo.json"
@@ -331,8 +341,19 @@ func _physics_process(delta: float) -> void:
 			$SkidSFX.stop()
 	elif is_actually_on_floor() and skidding and Settings.file.audio.skid_sfx == 1:
 		$SkidSFX.play()
+	if p_meter_full and Settings.file.visuals.extra_particles == 1:
+		p_speed_sparkle_timer -= delta
+		if p_speed_sparkle_timer <= 0.0 and abs(velocity.x) > 0:
+			p_speed_sparkle_timer = 0.08
+			var sparkle = COIN_SPARKLE_PARTICLE.instantiate()
+			sparkle.global_position = global_position - Vector2(direction * 12, 0)
+			sparkle.finished.connect(sparkle.queue_free)
+			add_sibling(sparkle)
+	else:
+		p_speed_sparkle_timer = 0.0
 
 const BUBBLE_PARTICLE = preload("uid://bwjae1h1airtr")
+const COIN_SPARKLE_PARTICLE = preload("res://Scenes/Prefabs/Particles/CoinSparkle.tscn")
 
 func handle_water_detection() -> void:
 	var old_water = in_water
@@ -353,6 +374,12 @@ func _process(delta: float) -> void:
 		DiscoLevel.combo_meter = 100
 	%Hammer.visible = has_hammer
 	%HammerHitbox.collision_layer = has_hammer
+	if p_speed_music_player != null:
+		var should_play = p_meter_full and not is_invincible
+		if should_play and not p_speed_music_player.playing:
+			p_speed_music_player.play()
+		elif not should_play and p_speed_music_player.playing:
+			p_speed_music_player.stop()
 
 func apply_gravity(delta: float) -> void:
 	if in_water or flight_meter > 0:
@@ -605,6 +632,14 @@ func get_effective_run_speed() -> float:
 	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled:
 		return RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
 	return RUN_SPEED
+
+func _on_p_speed_boost_start() -> void:
+	if Settings.file.visuals.extra_particles == 1:
+		for i in 2:
+			var node = SMOKE_PARTICLE.instantiate()
+			node.global_position = global_position - Vector2(direction * 8 * (i + 1), 0)
+			add_sibling(node)
+	p_speed_sparkle_timer = 0.0
 
 func damage() -> void:
 	if can_hurt == false or is_invincible:
