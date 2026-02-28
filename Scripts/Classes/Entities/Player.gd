@@ -53,8 +53,8 @@ var flight_meter := 0.0
 
 var p_meter := 0.0
 var p_meter_full := false
-var p_meter_airborne_release_timer := 0.0
-const P_METER_AIRBORNE_GRACE_PERIOD := 0.25
+var p_speed_hold_timer := 0.0
+const P_SPEED_HOLD_TIME := 0.25
 
 signal p_meter_filled
 signal p_meter_emptied
@@ -575,25 +575,25 @@ func handle_p_meter(delta: float) -> void:
 	var at_run_speed: bool = abs(velocity.x) >= RUN_SPEED - 1
 	var reversing_direction: bool = velocity.x != 0.0 and sign(input_direction) != sign(velocity.x) and input_direction != 0
 	if on_ground:
-		# Reset airborne release timer when landing
-		p_meter_airborne_release_timer = 0.0
+		# Reset hold timer when landing
+		p_speed_hold_timer = 0.0
 		if at_run_speed:
 			p_meter = min(p_meter + fill_speed * delta, 1.0)
 		else:
 			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
 	else:
 		if reversing_direction:
-			# Pushing backwards: drain immediately, no grace period
-			p_meter_airborne_release_timer = 0.0
+			# Pushing backwards: drain immediately, no hold window
+			p_speed_hold_timer = 0.0
 			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
 		elif input_direction == 0:
-			# Released forward button: count down grace period before draining
-			p_meter_airborne_release_timer = max(p_meter_airborne_release_timer - delta, 0.0)
-			if p_meter_airborne_release_timer <= 0.0:
+			# Released forward button: count down hold window before draining
+			p_speed_hold_timer = max(p_speed_hold_timer - delta, 0.0)
+			if p_speed_hold_timer <= 0.0:
 				p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
 		else:
-			# Pressing forward in the correct direction: reset timer and preserve meter
-			p_meter_airborne_release_timer = P_METER_AIRBORNE_GRACE_PERIOD
+			# Pressing forward in the correct direction: reset hold timer and preserve meter
+			p_speed_hold_timer = P_SPEED_HOLD_TIME
 	if p_meter >= 1.0 and not p_meter_full:
 		p_meter_full = true
 		p_meter_filled.emit()
