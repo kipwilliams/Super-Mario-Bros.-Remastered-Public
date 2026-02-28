@@ -627,12 +627,12 @@ func get_effective_run_speed() -> float:
 		# to the normal's horizontal lean, i.e. running downhill.
 		if is_actually_on_floor():
 			var fn := get_floor_normal()
+			# abs(fn.x) ranges 0.0 (flat) to 1.0 (vertical wall), giving a
+			# fully slope-proportional bonus/penalty on boost speed.
 			if fn.x * velocity.x < 0.0:
-				# Cap slope multiplier at 0.5 (30° slope) to prevent extreme speeds on near-vertical surfaces
-				boost_speed += boost_speed * min(abs(fn.x), 0.5)
+				boost_speed += boost_speed * abs(fn.x)
 			elif fn.x * velocity.x > 0.0:
-				# Running uphill reduces max boost speed proportional to slope steepness
-				boost_speed -= boost_speed * min(abs(fn.x), 0.5)
+				boost_speed -= boost_speed * abs(fn.x)
 				boost_speed = max(boost_speed, RUN_SPEED)
 		return boost_speed
 	return RUN_SPEED
