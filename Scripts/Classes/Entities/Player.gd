@@ -59,6 +59,20 @@ const P_SPEED_GRAVITY_REDUCTION := 0.25   # Gravity is reduced by 25% at P-speed
 const P_METER_NORMAL_DRAIN_MULTIPLIER := 2.0  # Default drain multiplier when decelerating below run speed
 var p_speed_sparkle_timer := 0.0
 
+# --- P-Speed debug toggles (all true by default; disable in the Inspector to isolate mechanics) ---
+@export_group("P-Speed Debug")
+@export var p_speed_debug_speed_boost: bool = true
+@export var p_speed_debug_slope_modifiers: bool = true
+@export var p_speed_debug_reduced_gravity: bool = true
+@export var p_speed_debug_jump_cap: bool = true
+@export var p_speed_debug_skid_drain: bool = true
+@export var p_speed_debug_sparkle_trail: bool = true
+@export var p_speed_debug_visual_effects: bool = true
+@export var p_speed_debug_boost_sound: bool = true
+@export var p_speed_debug_skid_protection: bool = true
+@export var p_speed_debug_momentum_preservation: bool = true
+@export_group("")
+
 signal p_meter_filled
 signal p_meter_emptied
 
@@ -335,7 +349,7 @@ func _physics_process(delta: float) -> void:
 			$SkidSFX.stop()
 	elif is_actually_on_floor() and skidding and Settings.file.audio.skid_sfx == 1:
 		$SkidSFX.play()
-	if p_meter_full:
+	if p_meter_full and p_speed_debug_sparkle_trail:
 		p_speed_sparkle_timer -= delta
 		if p_speed_sparkle_timer <= 0.0 and abs(velocity.x) > 0:
 			p_speed_sparkle_timer = 0.08
@@ -375,7 +389,7 @@ func apply_gravity(delta: float) -> void:
 	else:
 		if sign(gravity_vector.y) * velocity.y + JUMP_HOLD_SPEED_THRESHOLD > 0.0:
 			gravity = FALL_GRAVITY
-	var p_speed_grav_scale := (1.0 - P_SPEED_GRAVITY_REDUCTION) if (p_meter_full and not is_actually_on_floor()) else 1.0
+	var p_speed_grav_scale := (1.0 - P_SPEED_GRAVITY_REDUCTION) if (p_meter_full and not is_actually_on_floor() and p_speed_debug_reduced_gravity) else 1.0
 	velocity += (gravity_vector * ((gravity / (1.5 if low_gravity else 1.0)) * p_speed_grav_scale / delta)) * delta
 	var target_fall: float = MAX_FALL_SPEED
 	if in_water:
@@ -597,7 +611,7 @@ func handle_p_meter(delta: float) -> void:
 			p_meter = min(p_meter + fill_speed * delta, 1.0)
 		else:
 			# Skidding drains faster than normal deceleration, proportional to skid rate vs. decel rate
-			var drain_multiplier := (RUN_SKID / DECEL) if skidding else P_METER_NORMAL_DRAIN_MULTIPLIER
+			var drain_multiplier := (RUN_SKID / DECEL) if (skidding and p_speed_debug_skid_drain) else P_METER_NORMAL_DRAIN_MULTIPLIER
 			p_meter = max(p_meter - fill_speed * drain_multiplier * delta, 0.0)
 	else:
 		if reversing_direction:
@@ -620,12 +634,12 @@ func handle_p_meter(delta: float) -> void:
 		p_meter_emptied.emit()
 
 func get_effective_run_speed() -> float:
-	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled:
+	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled and p_speed_debug_speed_boost:
 		var boost_speed: float = RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
 		# Running downhill at P-speed increases top speed proportional to slope steepness.
 		# A negative product of floor_normal.x and velocity.x means the player moves opposite
 		# to the normal's horizontal lean, i.e. running downhill.
-		if is_actually_on_floor():
+		if is_actually_on_floor() and p_speed_debug_slope_modifiers:
 			var fn := get_floor_normal()
 			# abs(fn.x) ranges 0.0 (flat) to 1.0 (vertical wall), giving a
 			# fully slope-proportional bonus/penalty on boost speed.
@@ -638,14 +652,16 @@ func get_effective_run_speed() -> float:
 	return RUN_SPEED
 
 func _on_p_speed_boost_start() -> void:
-	AudioManager.play_sfx("power_up", global_position, 1.5)	
-	for i in 2:
-		var particle_node = SMOKE_PARTICLE.instantiate()
-		var node = Node2D.new()
-		node.global_position = global_position - Vector2(direction * 8 * (i + 1), 0)
-		node.apply_scale(Vector2(0.25, 0.25))
-		node.add_child(particle_node)
-		add_sibling(node)
+	if p_speed_debug_boost_sound:
+		AudioManager.play_sfx("power_up", global_position, 1.5)
+	if p_speed_debug_visual_effects:
+		for i in 2:
+			var particle_node = SMOKE_PARTICLE.instantiate()
+			var node = Node2D.new()
+			node.global_position = global_position - Vector2(direction * 8 * (i + 1), 0)
+			node.apply_scale(Vector2(0.25, 0.25))
+			node.add_child(particle_node)
+			add_sibling(node)
 	p_speed_sparkle_timer = 0.0
 
 func damage() -> void:
@@ -953,7 +969,8 @@ func jump() -> void:
 	has_jumped = true
 
 func calculate_jump_height() -> float: # Thanks wye love you xxx
-	return -(JUMP_HEIGHT + JUMP_INCR * int(min(abs(velocity.x), RUN_SPEED) / 25))
+	var capped_speed := min(abs(velocity.x), RUN_SPEED) if p_speed_debug_jump_cap else abs(velocity.x)
+	return -(JUMP_HEIGHT + JUMP_INCR * int(capped_speed / 25))
 
 const SMOKE_PARTICLE = preload("res://Scenes/Prefabs/Particles/SmokeParticle.tscn")
 
