@@ -88,7 +88,7 @@ func handle_modern_hud() -> void:
 		%ModernTime.text = "⏲---"
 
 func handle_p_meter_hud() -> void:
-	var p_meter_enabled := is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled
+	var p_meter_enabled: bool = is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled
 	%PMeter.visible = p_meter_enabled
 	if not p_meter_enabled:
 		return
@@ -98,7 +98,8 @@ func handle_p_meter_hud() -> void:
 	else:
 		%PMeterBar.value = 0.0
 
-func handle_disco_combo() -> void:	%Combo.show()
+func handle_disco_combo() -> void:	
+	%Combo.show()
 	%ComboAmount.text = "Combo*" + str(DiscoLevel.combo_amount)
 	%ComboMeter.value = DiscoLevel.combo_meter
 	%ComboMeter.modulate = Color.PURPLE if DiscoLevel.combo_breaks <= 0 else Color.WHITE

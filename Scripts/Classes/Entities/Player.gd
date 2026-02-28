@@ -335,7 +335,7 @@ func _physics_process(delta: float) -> void:
 			$SkidSFX.stop()
 	elif is_actually_on_floor() and skidding and Settings.file.audio.skid_sfx == 1:
 		$SkidSFX.play()
-	if p_meter_full and Settings.file.visuals.extra_particles == 1:
+	if p_meter_full:
 		p_speed_sparkle_timer -= delta
 		if p_speed_sparkle_timer <= 0.0 and abs(velocity.x) > 0:
 			p_speed_sparkle_timer = 0.08
@@ -621,7 +621,7 @@ func handle_p_meter(delta: float) -> void:
 
 func get_effective_run_speed() -> float:
 	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled:
-		var boost_speed := RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
+		var boost_speed: float = RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
 		# Running downhill at P-speed increases top speed proportional to slope steepness.
 		# A negative product of floor_normal.x and velocity.x means the player moves opposite
 		# to the normal's horizontal lean, i.e. running downhill.
@@ -638,12 +638,14 @@ func get_effective_run_speed() -> float:
 	return RUN_SPEED
 
 func _on_p_speed_boost_start() -> void:
-	AudioManager.play_sfx("power_up", global_position, 1.5)
-	if Settings.file.visuals.extra_particles == 1:
-		for i in 2:
-			var node = SMOKE_PARTICLE.instantiate()
-			node.global_position = global_position - Vector2(direction * 8 * (i + 1), 0)
-			add_sibling(node)
+	AudioManager.play_sfx("power_up", global_position, 1.5)	
+	for i in 2:
+		var particle_node = SMOKE_PARTICLE.instantiate()
+		var node = Node2D.new()
+		node.global_position = global_position - Vector2(direction * 8 * (i + 1), 0)
+		node.apply_scale(Vector2(0.25, 0.25))
+		node.add_child(particle_node)
+		add_sibling(node)
 	p_speed_sparkle_timer = 0.0
 
 func damage() -> void:
