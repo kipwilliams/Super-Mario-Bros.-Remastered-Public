@@ -630,6 +630,10 @@ func get_effective_run_speed() -> float:
 			if fn.x * velocity.x < 0.0:
 				# Cap slope multiplier at 0.5 (30° slope) to prevent extreme speeds on near-vertical surfaces
 				boost_speed += boost_speed * min(abs(fn.x), 0.5)
+			elif fn.x * velocity.x > 0.0:
+				# Running uphill reduces max boost speed proportional to slope steepness
+				boost_speed -= boost_speed * min(abs(fn.x), 0.5)
+				boost_speed = max(boost_speed, RUN_SPEED)
 		return boost_speed
 	return RUN_SPEED
 
