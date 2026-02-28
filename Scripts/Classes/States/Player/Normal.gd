@@ -84,7 +84,7 @@ func grounded(delta: float) -> void:
 func handle_ground_movement(delta: float) -> void:
 	if player.skidding:
 		ground_skid(delta)
-	elif (player.input_direction != player.velocity_direction) and player.input_direction != 0 and abs(player.velocity.x) > player.SKID_THRESHOLD and not player.crouching:
+	elif (player.input_direction != player.velocity_direction) and player.input_direction != 0 and abs(player.velocity.x) > player.SKID_THRESHOLD and not player.crouching and not player.p_meter_full:
 		print([player.input_direction, player.velocity_direction])
 		player.skidding = true
 	elif player.input_direction != 0 and not player.crouching:
@@ -127,7 +127,7 @@ func in_air() -> void:
 			jump_buffer = 4
 
 func handle_air_movement(delta: float) -> void:
-	if player.input_direction != 0 and player.velocity_direction != player.input_direction:
+	if player.input_direction != 0 and player.velocity_direction != player.input_direction and not player.p_meter_full:
 		air_skid(delta)
 	if player.input_direction != 0:
 		air_acceleration(delta)

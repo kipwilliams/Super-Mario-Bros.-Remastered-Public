@@ -55,6 +55,8 @@ var p_meter := 0.0
 var p_meter_full := false
 var p_speed_hold_timer := 0.0
 const P_SPEED_HOLD_TIME := 0.25
+const P_SPEED_GRAVITY_REDUCTION := 0.25   # Gravity is reduced by 25% at P-speed for longer jumps
+const P_METER_NORMAL_DRAIN_MULTIPLIER := 2.0  # Default drain multiplier when decelerating below run speed
 var p_speed_sparkle_timer := 0.0
 
 signal p_meter_filled
@@ -373,7 +375,8 @@ func apply_gravity(delta: float) -> void:
 	else:
 		if sign(gravity_vector.y) * velocity.y + JUMP_HOLD_SPEED_THRESHOLD > 0.0:
 			gravity = FALL_GRAVITY
-	velocity += (gravity_vector * ((gravity / (1.5 if low_gravity else 1.0)) / delta)) * delta
+	var p_speed_grav_scale := (1.0 - P_SPEED_GRAVITY_REDUCTION) if (p_meter_full and not is_actually_on_floor()) else 1.0
+	velocity += (gravity_vector * ((gravity / (1.5 if low_gravity else 1.0)) * p_speed_grav_scale / delta)) * delta
 	var target_fall: float = MAX_FALL_SPEED
 	if in_water:
 		target_fall = MAX_SWIM_FALL_SPEED
@@ -593,7 +596,9 @@ func handle_p_meter(delta: float) -> void:
 		if at_run_speed:
 			p_meter = min(p_meter + fill_speed * delta, 1.0)
 		else:
-			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+			# Skidding drains faster than normal deceleration, proportional to skid rate vs. decel rate
+			var drain_multiplier := (RUN_SKID / DECEL) if skidding else P_METER_NORMAL_DRAIN_MULTIPLIER
+			p_meter = max(p_meter - fill_speed * drain_multiplier * delta, 0.0)
 	else:
 		if reversing_direction:
 			# Pushing backwards: drain immediately, no hold window
@@ -616,7 +621,16 @@ func handle_p_meter(delta: float) -> void:
 
 func get_effective_run_speed() -> float:
 	if p_meter_full and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled:
-		return RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
+		var boost_speed := RUN_SPEED * (Global.current_level.p_meter_boost_multiplier / 100.0)
+		# Running downhill at P-speed increases top speed proportional to slope steepness.
+		# A negative product of floor_normal.x and velocity.x means the player moves opposite
+		# to the normal's horizontal lean, i.e. running downhill.
+		if is_actually_on_floor():
+			var fn := get_floor_normal()
+			if fn.x * velocity.x < 0.0:
+				# Cap slope multiplier at 0.5 (30° slope) to prevent extreme speeds on near-vertical surfaces
+				boost_speed += boost_speed * min(abs(fn.x), 0.5)
+		return boost_speed
 	return RUN_SPEED
 
 func _on_p_speed_boost_start() -> void:
