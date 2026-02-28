@@ -56,7 +56,6 @@ var p_meter_full := false
 var p_speed_hold_timer := 0.0
 const P_SPEED_HOLD_TIME := 0.25
 var p_speed_sparkle_timer := 0.0
-var p_speed_music_player: AudioStreamPlayer = null
 
 signal p_meter_filled
 signal p_meter_emptied
@@ -245,13 +244,6 @@ func _ready() -> void:
 	handle_invincible_palette()
 	if Global.level_editor == null:
 		recenter_camera()
-	p_speed_music_player = AudioStreamPlayer.new()
-	p_speed_music_player.bus = "Music"
-	p_speed_music_player.volume_db = linear_to_db(0.25)
-	var p_speed_stream = AudioManager.create_stream_from_json("res://Assets/Audio/BGM/StarMan.json")
-	if p_speed_stream != null:
-		p_speed_music_player.stream = p_speed_stream
-	add_child(p_speed_music_player)
 	p_meter_filled.connect(_on_p_speed_boost_start)
 
 func apply_character_physics(apply: bool) -> void:
@@ -374,12 +366,6 @@ func _process(delta: float) -> void:
 		DiscoLevel.combo_meter = 100
 	%Hammer.visible = has_hammer
 	%HammerHitbox.collision_layer = has_hammer
-	if p_speed_music_player != null:
-		var should_play = p_meter_full and not is_invincible
-		if should_play and not p_speed_music_player.playing:
-			p_speed_music_player.play()
-		elif not should_play and p_speed_music_player.playing:
-			p_speed_music_player.stop()
 
 func apply_gravity(delta: float) -> void:
 	if in_water or flight_meter > 0:
@@ -634,6 +620,7 @@ func get_effective_run_speed() -> float:
 	return RUN_SPEED
 
 func _on_p_speed_boost_start() -> void:
+	AudioManager.play_sfx("power_up", global_position, 1.5)
 	if Settings.file.visuals.extra_particles == 1:
 		for i in 2:
 			var node = SMOKE_PARTICLE.instantiate()
