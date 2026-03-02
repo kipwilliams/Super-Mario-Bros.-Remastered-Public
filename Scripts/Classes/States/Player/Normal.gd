@@ -37,15 +37,15 @@ func handle_movement(delta: float) -> void:
 	if jump_buffer <= 0:
 		jump_queued = false
 	player.apply_gravity(delta)
-	if player.is_actually_on_floor():
-		var player_transform = player.global_transform
-		player_transform.origin += Vector2.UP * 1
+	player.update_ground_snap_settings(delta)
 	if player.is_actually_on_floor():
 		handle_ground_movement(delta)
 	elif player.in_water or player.flight_meter > 0:
 		handle_swimming(delta)
 	else:
 		handle_air_movement(delta)
+	if player.should_stick_to_ground():
+		player.apply_floor_snap()
 	player.move_and_slide()
 	player.moved.emit()
 
@@ -85,7 +85,6 @@ func handle_ground_movement(delta: float) -> void:
 	if player.skidding:
 		ground_skid(delta)
 	elif (player.input_direction != player.velocity_direction) and player.input_direction != 0 and abs(player.velocity.x) > player.SKID_THRESHOLD and not player.crouching and not (player.p_meter_full and player.p_speed_debug_skid_protection):
-		print([player.input_direction, player.velocity_direction])
 		player.skidding = true
 	elif player.input_direction != 0 and not player.crouching:
 		ground_acceleration(delta)
@@ -93,6 +92,10 @@ func handle_ground_movement(delta: float) -> void:
 		deceleration(delta)
 
 func ground_acceleration(delta: float) -> void:
+	# Prevent tiny opposite drift on slopes from causing a backward nudge when input starts.
+	if player.input_direction != 0 and sign(player.velocity.x) != 0 and sign(player.velocity.x) != player.input_direction and abs(player.velocity.x) < player.SKID_THRESHOLD:
+		Log.ln("ground accel pre-clamp: input={0} vel_x={1}", player.input_direction, snappedf(player.velocity.x, 0.1))
+		player.velocity.x = 0.0
 	var target_move_speed := player.WALK_SPEED
 	if player.in_water or player.flight_meter > 0:
 		target_move_speed = player.SWIM_GROUND_SPEED
@@ -105,10 +108,19 @@ func ground_acceleration(delta: float) -> void:
 			target_accel = player.RUN_SKID
 		else:
 			target_accel = player.WALK_SKID
+	target_accel *= player.get_ground_accel_multiplier(player.input_direction)
+	Log.ln("ground accel step: input={0} accel={1} target_speed={2}", player.input_direction, snappedf(target_accel, 0.01), snappedf(target_move_speed, 0.1))
 	player.velocity.x = move_toward(player.velocity.x, target_move_speed * player.input_direction, (target_accel / delta) * delta)
+	# Ensure slope response cannot leave residual opposite velocity while input is held.
+	if player.is_actually_on_floor() and sign(player.velocity.x) != 0 and sign(player.velocity.x) != player.input_direction:
+		Log.ln("ground accel post-clamp: input={0} vel_x={1}", player.input_direction, snappedf(player.velocity.x, 0.1))
+		player.velocity.x = 0.0
 
 func deceleration(delta: float) -> void:
 	player.velocity.x = move_toward(player.velocity.x, 0, (player.DECEL / delta) * delta)
+	# Prevent tiny downhill creep when grounded and no direction is pressed.
+	if player.is_actually_on_floor() and abs(player.velocity.x) < 2.0:
+		player.velocity.x = 0.0
 
 func ground_skid(delta: float) -> void:
 	var target_skid := player.RUN_SKID
@@ -141,7 +153,10 @@ func handle_air_movement(delta: float) -> void:
 func air_acceleration(delta: float) -> void:
 	var target_speed = player.WALK_SPEED
 	if abs(player.velocity.x) >= player.WALK_SPEED and Global.player_action_pressed("run", player.player_id) and player.can_run:
-		target_speed = player.get_effective_run_speed()
+		# Preserve horizontal takeoff momentum in air; don't gain extra speed from
+		# re-evaluating ground/slope run caps after leaving the floor.
+		target_speed = max(player.WALK_SPEED, abs(player.velocity_x_jump_stored))
+	Log.ln("air accel target: run={0} target={1} takeoff={2} velx={3}", Global.player_action_pressed("run", player.player_id), snappedf(target_speed, 0.1), snappedf(abs(player.velocity_x_jump_stored), 0.1), snappedf(abs(player.velocity.x), 0.1))
 	player.velocity.x = move_toward(player.velocity.x, target_speed * player.input_direction, (player.AIR_ACCEL / delta) * delta)
 
 func air_skid(delta: float) -> void:
