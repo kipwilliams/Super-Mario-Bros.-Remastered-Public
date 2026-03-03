@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://pmeter_toggle_tscn"]
+
+[ext_resource type="Script" uid="uid://pmeter_toggle_gd" path="res://Scripts/Parts/PMeterToggle.gd" id="1_pmtgl"]
+[ext_resource type="Script" uid="uid://ctfbuoxtnnl0q" path="res://Scripts/Classes/Components/EditorPropertyExposer.gd" id="2_pmtgl"]
+[ext_resource type="Script" uid="uid://cpwloakvp672a" path="res://Scripts/Parts/EditorVisibleNode.gd" id="3_pmtgl"]
+[ext_resource type="Texture2D" uid="uid://pmeter_toggle_png" path="res://Assets/Sprites/Editor/PMeterToggle.png" id="4_pmtgl"]
+
+[node name="PMeterToggleOBJ" type="Node2D"]
+script = ExtResource("1_pmtgl")
+metadata/_custom_type_script = "uid://pmeter_toggle_gd"
+
+[node name="EditorPropertyExposer" type="Node" parent="."]
+script = ExtResource("2_pmtgl")
+properties = Array[String](["enable_p_meter"])
+metadata/_custom_type_script = "uid://ctfbuoxtnnl0q"
+
+[node name="LevelEditorVisibleNode" type="Node2D" parent="."]
+script = ExtResource("3_pmtgl")
+metadata/_custom_type_script = "uid://cpwloakvp672a"
+
+[node name="Sprite2D" type="Sprite2D" parent="LevelEditorVisibleNode"]
+texture = ExtResource("4_pmtgl")

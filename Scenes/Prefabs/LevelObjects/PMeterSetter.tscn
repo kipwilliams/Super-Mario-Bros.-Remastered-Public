@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://pmeter_setter_tscn"]
+
+[ext_resource type="Script" uid="uid://pmeter_setter_gd" path="res://Scripts/Parts/PMeterSetter.gd" id="1_pmstr"]
+[ext_resource type="Script" uid="uid://ctfbuoxtnnl0q" path="res://Scripts/Classes/Components/EditorPropertyExposer.gd" id="2_pmstr"]
+[ext_resource type="Script" uid="uid://cpwloakvp672a" path="res://Scripts/Parts/EditorVisibleNode.gd" id="3_pmstr"]
+[ext_resource type="Texture2D" uid="uid://pmeter_setter_png" path="res://Assets/Sprites/Editor/PMeterSetter.png" id="4_pmstr"]
+
+[node name="PMeterSetterOBJ" type="Node2D"]
+script = ExtResource("1_pmstr")
+metadata/_custom_type_script = "uid://pmeter_setter_gd"
+
+[node name="EditorPropertyExposer" type="Node" parent="."]
+script = ExtResource("2_pmstr")
+properties = Array[String](["operation", "p_power_amount"])
+metadata/_custom_type_script = "uid://ctfbuoxtnnl0q"
+
+[node name="LevelEditorVisibleNode" type="Node2D" parent="."]
+script = ExtResource("3_pmstr")
+metadata/_custom_type_script = "uid://cpwloakvp672a"
+
+[node name="Sprite2D" type="Sprite2D" parent="LevelEditorVisibleNode"]
+texture = ExtResource("4_pmstr")

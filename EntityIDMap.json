@@ -256,11 +256,11 @@
 		"8,8"
 	],
 	"BA": [
-		"res://Scenes/Prefabs/Blocks/EmptyPSwitchBlock.tscn",
+		"res://Scenes/Prefabs/LevelObjects/PMeterToggle.tscn",
 		"0,0"
 	],
 	"BB": [
-		"res://Scenes/Prefabs/Blocks/PSwitchBlock.tscn",
+		"res://Scenes/Prefabs/LevelObjects/PMeterSetter.tscn",
 		"0,0"
 	],
 	"BC": [

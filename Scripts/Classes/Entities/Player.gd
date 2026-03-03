@@ -1,6 +1,43 @@
 class_name Player
 extends CharacterBody2D
 
+#region Mechanics Overview
+# P-SPEED MECHANICS
+# - Meter fill/decay and boost activation.
+# - Slope-aware P-meter fill multiplier:
+#   uphill reduces fill (steep uphill can block fill), downhill increases fill.
+# - Optional P-speed gravity reduction in fall state.
+# - Optional intentional hangtime near apex while boost is active.
+# - Optional jump-speed cap to keep jump height stable at extreme horizontal speeds.
+# - Gravity behavior is gravity-vector aware, so reduced-gravity/hangtime logic
+#   works correctly when gravity is flipped.
+#
+# Enhanced SLOPE MECHANICS (always active)
+# - Slope-aware speed cap:
+#   uphill lowers max walk/run/boost speed, downhill raises max walk/run/boost speed.
+# - Ground movement now uses slope-adjusted walk target speed (not fixed WALK_SPEED),
+#   so downhill walk cap increases and uphill walk cap decreases consistently.
+# - Slope-aware ground acceleration:
+#   uphill reduces acceleration, downhill increases acceleration.
+# - Floor snap keeps the player attached to slopes during grounded movement.
+# - Brief jump lockout prevents snap from suppressing jumps.
+# - Short floor-grace timer prevents one-frame floor-detection flicker.
+# - Air acceleration uses stored jump takeoff speed to preserve momentum and avoid
+#   sudden horizontal boosts when leaving slopes.
+# - While jumping, horizontal air acceleration is capped to exact takeoff speed,
+#   preventing uphill takeoffs from accelerating above the hill-limited launch speed.
+# - Airborne accel cap now applies for jump state regardless of run input; the
+#   player cannot regain WALK_SPEED in-air after a slower uphill takeoff.
+# - Pre-landing jump presses are intentionally ignored (no jump buffer) to avoid
+#   tiny bounce hops on touchdown.
+#
+# DEBUG LOGGING
+# - Uses Log.ln templates around gravity, P-meter, slope multipliers, run cap,
+#   snap state, and ground acceleration. Log.ln emits only on value changes.
+# - Focused troubleshooting mode logs only horizontal velocity with grounded
+#   state: "vel x: <value> grounded=<true|false>".
+#endregion
+
 #region Physics properies, these can be changed within a custom character's CharacterInfo.json
 var JUMP_GRAVITY := 11.0               # The player's gravity while jumping, measured in px/frame
 var JUMP_HEIGHT := 300.0               # The strength of the player's jump, measured in px/sec
@@ -50,6 +87,49 @@ var direction := 1
 var input_direction := 0
 
 var flight_meter := 0.0
+
+var p_meter := 0.0
+var p_meter_full := false
+const P_SPEED_GRAVITY_REDUCTION := 0.25   # Gravity is reduced by 25% at P-speed for longer jumps
+const P_SPEED_HANG_TIME := 0.10           # Brief apex float while at P-speed to improve jump distance
+const P_SPEED_HANG_APEX_WINDOW := 20.0    # Vertical speed window (px/sec) near apex where hangtime can trigger
+const P_METER_NORMAL_DRAIN_MULTIPLIER := 2.0  # Default drain multiplier when decelerating below run speed
+const P_METER_FILL_THRESHOLD_RUN_RATIO := 0.9 # Meter fills only near run speed (e.g. 90% of RUN_SPEED)
+const P_METER_UPHILL_GENTLE_THRESHOLD := 0.12      # abs(floor_normal.x) where uphill fill reaches gentle penalty
+const P_METER_UPHILL_STEEP_THRESHOLD := 0.45       # abs(floor_normal.x) where uphill fill is fully blocked
+const P_METER_UPHILL_GENTLE_FILL_MULTIPLIER := 0.65 # Fill rate on gentle uphill slopes
+const P_METER_DOWNHILL_GENTLE_THRESHOLD := 0.12     # abs(floor_normal.x) where downhill fill reaches gentle bonus
+const P_METER_DOWNHILL_STEEP_THRESHOLD := 0.45      # abs(floor_normal.x) where downhill fill reaches max bonus
+const P_METER_DOWNHILL_GENTLE_FILL_MULTIPLIER := 1.25 # Fill rate on gentle downhill slopes
+const P_METER_DOWNHILL_STEEP_FILL_MULTIPLIER := 1.6   # Fill rate on steep downhill slopes
+const RUN_CAP_UPHILL_MIN_MULTIPLIER := 0.75           # Max run-speed cap multiplier on steep uphill
+const RUN_CAP_DOWNHILL_MAX_MULTIPLIER := 1.25         # Max run-speed cap multiplier on steep downhill
+const GROUND_ACCEL_UPHILL_MIN_MULTIPLIER := 0.6       # Ground accel multiplier at steep uphill
+const GROUND_ACCEL_DOWNHILL_MAX_MULTIPLIER := 1.4     # Ground accel multiplier at steep downhill
+var p_speed_sparkle_timer := 0.0
+var p_speed_hang_timer := 0.0
+var p_speed_hang_used_this_airtime := false
+
+# Slope adhesion while running to avoid unintended airborne frames on hills.
+const RUN_GROUND_SNAP_LENGTH := 10.0
+const GROUND_SNAP_JUMP_LOCKOUT := 0.08
+const GROUND_SNAP_FLOOR_GRACE := 0.1
+
+# --- P-Speed debug toggles (all true by default; disable in the Inspector to isolate mechanics) ---
+@export_group("P-Speed Debug")
+@export var p_speed_debug_speed_boost: bool = true
+@export var p_speed_debug_reduced_gravity: bool = true
+@export var p_speed_debug_intentional_hangtime: bool = true
+@export var p_speed_debug_jump_cap: bool = true
+@export var p_speed_debug_skid_drain: bool = false
+@export var p_speed_debug_visual_effects: bool = true
+@export var p_speed_debug_boost_sound: bool = false
+@export var p_speed_debug_skid_protection: bool = false
+@export var p_speed_debug_momentum_preservation: bool = false
+@export_group("")
+
+signal p_meter_filled
+signal p_meter_emptied
 
 var velocity_direction := 1
 var velocity_x_jump_stored := 0
@@ -205,8 +285,11 @@ var swim_stroke := false
 var skid_frames := 0
 
 var simulated_velocity := Vector2.ZERO
+var ground_snap_jump_lockout_timer := 0.0
+var ground_snap_floor_grace_timer := 0.0
 
 func _ready() -> void:
+	floor_stop_on_slope = true
 	if classic_physics:
 		apply_classic_physics()
 	get_viewport().size_changed.connect(recenter_camera)
@@ -235,8 +318,10 @@ func _ready() -> void:
 	handle_invincible_palette()
 	if Global.level_editor == null:
 		recenter_camera()
+	p_meter_filled.connect(_on_p_speed_boost_start)
 
 func apply_character_physics(apply: bool) -> void:
+	# Log.disable = true
 	var path = "res://Assets/Sprites/Players/" + character + "/CharacterInfo.json"
 	if int(Global.player_characters[player_id]) > 3:
 		path = path.replace("res://Assets/Sprites/Players", Global.config_path.path_join("custom_characters/"))
@@ -300,6 +385,7 @@ func _physics_process(delta: float) -> void:
 	handle_directions()
 	handle_block_collision_detection()
 	handle_wing_flight(delta)
+	handle_p_meter(delta)
 	air_frames = (air_frames + 1 if is_on_floor() == false else 0)
 	for i in get_tree().get_nodes_in_group("StepCollision"):
 		var on_wall := false
@@ -322,8 +408,19 @@ func _physics_process(delta: float) -> void:
 			$SkidSFX.stop()
 	elif is_actually_on_floor() and skidding and Settings.file.audio.skid_sfx == 1:
 		$SkidSFX.play()
+	if p_meter_full and p_speed_debug_visual_effects:
+		p_speed_sparkle_timer -= delta
+		if p_speed_sparkle_timer <= 0.0 and abs(velocity.x) > 0:
+			p_speed_sparkle_timer = 0.08
+			var sparkle = COIN_SPARKLE_PARTICLE.instantiate()
+			sparkle.global_position = global_position - Vector2(direction * 12, 0)
+			sparkle.finished.connect(sparkle.queue_free)
+			add_sibling(sparkle)
+	else:
+		p_speed_sparkle_timer = 0.0
 
 const BUBBLE_PARTICLE = preload("uid://bwjae1h1airtr")
+const COIN_SPARKLE_PARTICLE = preload("res://Scenes/Prefabs/Particles/CoinSparkle.tscn")
 
 func handle_water_detection() -> void:
 	var old_water = in_water
@@ -346,12 +443,38 @@ func _process(delta: float) -> void:
 	%HammerHitbox.collision_layer = has_hammer
 
 func apply_gravity(delta: float) -> void:
+	var p_speed_boost_active := is_p_speed_boost_active()
+	var jump_held = Global.player_action_pressed("jump", player_id)
+	if is_actually_on_floor() or in_water or flight_meter > 0 or not p_speed_boost_active:
+		p_speed_hang_timer = 0.0
+		p_speed_hang_used_this_airtime = false
 	if in_water or flight_meter > 0:
 		gravity = SWIM_GRAVITY
 	else:
 		if sign(gravity_vector.y) * velocity.y + JUMP_HOLD_SPEED_THRESHOLD > 0.0:
 			gravity = FALL_GRAVITY
-	velocity += (gravity_vector * ((gravity / (1.5 if low_gravity else 1.0)) / delta)) * delta
+	if p_speed_boost_active and jump_held and not is_actually_on_floor() and gravity == FALL_GRAVITY and p_speed_debug_intentional_hangtime and not p_speed_hang_used_this_airtime:
+		var vertical_speed = abs(sign(gravity_vector.y) * velocity.y)
+		if vertical_speed <= P_SPEED_HANG_APEX_WINDOW:
+			p_speed_hang_timer = P_SPEED_HANG_TIME
+			p_speed_hang_used_this_airtime = true
+	var hangtime_active = p_speed_hang_timer > 0.0 and p_speed_boost_active and jump_held and p_speed_debug_intentional_hangtime
+	if not hangtime_active:
+		p_speed_hang_timer = 0.0
+	var hangtime_grav_scale := 0.0 if hangtime_active else 1.0
+	if hangtime_active:
+		# Keep a true "float" at apex; gravity scaling alone still preserves prior downward velocity.
+		velocity.y = 0.0
+		p_speed_hang_timer = max(p_speed_hang_timer - delta, 0.0)
+	var p_speed_grav_scale := (1.0 - P_SPEED_GRAVITY_REDUCTION) if (p_speed_boost_active and jump_held and not is_actually_on_floor() and gravity == FALL_GRAVITY and p_speed_debug_reduced_gravity) else 1.0
+	var grounded := is_actually_on_floor() and not in_water and flight_meter <= 0
+	var apply_gravity_scale := 0.0 if (grounded and not jump_held) else 1.0
+	# Log.ln(
+	# 	"grav state: grounded={0} jump_held={1} boost={2} grav={3} grav_scale={4} hang={5} hang_timer={6}",
+	# 	grounded, jump_held, p_speed_boost_active, gravity, p_speed_grav_scale * hangtime_grav_scale * apply_gravity_scale, hangtime_active, p_speed_hang_timer
+	# )
+	velocity += (gravity_vector * ((gravity / (1.5 if low_gravity else 1.0)) * p_speed_grav_scale * hangtime_grav_scale * apply_gravity_scale / delta)) * delta
+
 	var target_fall: float = MAX_FALL_SPEED
 	if in_water:
 		target_fall = MAX_SWIM_FALL_SPEED
@@ -557,6 +680,168 @@ func handle_wing_flight(delta: float) -> void:
 		%Wings.get_node("AnimationPlayer").play("Flash")
 	else:
 		%Wings.get_node("AnimationPlayer").play("RESET")
+
+func handle_p_meter(delta: float) -> void:
+	if not is_instance_valid(Global.current_level) or not Global.current_level.p_meter_enabled:
+		return
+	var fill_speed: float = Global.current_level.p_meter_fill_speed
+	var on_ground: bool = is_actually_on_floor() and not in_water
+	var run_intent: bool = Global.player_action_pressed("run", player_id) and input_direction != 0 and can_run and not in_water and flight_meter <= 0
+	var fill_speed_threshold: float = RUN_SPEED * P_METER_FILL_THRESHOLD_RUN_RATIO
+	var at_fill_speed: bool = abs(velocity.x) >= fill_speed_threshold
+	var reversing_direction: bool = velocity.x != 0.0 and sign(input_direction) != sign(velocity.x) and input_direction != 0
+	var fill_multiplier := 1.0
+	var p_mode := "hold"
+	if on_ground:
+		if run_intent and at_fill_speed:
+			fill_multiplier = get_p_meter_ground_fill_multiplier()
+			p_mode = "fill"
+			p_meter = min(p_meter + fill_speed * fill_multiplier * delta, 1.0)
+		else:
+			# Skidding drains faster than normal deceleration, proportional to skid rate vs. decel rate
+			var drain_multiplier := (RUN_SKID / DECEL) if (skidding and p_speed_debug_skid_drain) else P_METER_NORMAL_DRAIN_MULTIPLIER
+			p_mode = "drain_ground"
+			p_meter = max(p_meter - fill_speed * drain_multiplier * delta, 0.0)
+	else:
+		if reversing_direction:
+			# Pushing backwards drains immediately.
+			p_mode = "drain_reverse"
+			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+		elif input_direction == 0:
+			# No timer-based hold in air; releasing input drains immediately.
+			p_mode = "drain_air_release"
+			p_meter = max(p_meter - fill_speed * 2.0 * delta, 0.0)
+		else:
+			# Preserve meter while holding forward in air.
+			p_mode = "hold_air_forward"
+	# Log.ln(
+	# 	"p-meter: mode={0} meter={1} full={2} run_intent={3} at_fill_speed={4} threshold={5} fill_mul={6} input={7} vel_x={8}",
+	# 	p_mode, snappedf(p_meter, 0.001), p_meter_full, run_intent, at_fill_speed, snappedf(fill_speed_threshold, 0.1), snappedf(fill_multiplier, 0.001), input_direction, snappedf(velocity.x, 0.1)
+	# )
+	var meter_full_now := p_meter >= 1.0
+	if meter_full_now and not p_meter_full:
+		p_meter_full = true
+		p_meter_filled.emit()
+	elif not meter_full_now and p_meter_full:
+		p_meter_full = false
+		p_meter_emptied.emit()
+
+func get_p_meter_ground_fill_multiplier() -> float:
+	if not is_actually_on_floor():
+		return 1.0
+	if velocity.x == 0.0:
+		return 1.0
+	var fn = get_floor_normal()
+	var running_uphill = fn.x * velocity.x < 0.0
+	var slope_steepness = abs(fn.x)
+	# Log.ln("slope fill dir: fnx={0} velx={1} uphill={2} downhill={3}", snappedf(fn.x, 0.001), snappedf(velocity.x, 0.1), running_uphill, fn.x * velocity.x > 0.0)
+	# Log.ln("Running direction: {0}", "uphill" if running_uphill else  "not uphill")
+	if running_uphill:
+		if slope_steepness >= P_METER_UPHILL_STEEP_THRESHOLD:
+			return 0.0
+		if slope_steepness <= P_METER_UPHILL_GENTLE_THRESHOLD:
+			return lerpf(1.0, P_METER_UPHILL_GENTLE_FILL_MULTIPLIER, slope_steepness / P_METER_UPHILL_GENTLE_THRESHOLD)
+		var uphill_t = (slope_steepness - P_METER_UPHILL_GENTLE_THRESHOLD) / (P_METER_UPHILL_STEEP_THRESHOLD - P_METER_UPHILL_GENTLE_THRESHOLD)
+		return lerpf(P_METER_UPHILL_GENTLE_FILL_MULTIPLIER, 0.0, uphill_t)
+	var running_downhill = fn.x * velocity.x > 0.0
+	# Log.ln("Running direction: {0}", "downhill" if running_downhill else "flat")
+	if not running_downhill:
+		return 1.0
+	if slope_steepness >= P_METER_DOWNHILL_STEEP_THRESHOLD:
+		return P_METER_DOWNHILL_STEEP_FILL_MULTIPLIER
+	if slope_steepness <= P_METER_DOWNHILL_GENTLE_THRESHOLD:
+		return lerpf(1.0, P_METER_DOWNHILL_GENTLE_FILL_MULTIPLIER, slope_steepness / P_METER_DOWNHILL_GENTLE_THRESHOLD)
+	var downhill_t = (slope_steepness - P_METER_DOWNHILL_GENTLE_THRESHOLD) / (P_METER_DOWNHILL_STEEP_THRESHOLD - P_METER_DOWNHILL_GENTLE_THRESHOLD)
+	return lerpf(P_METER_DOWNHILL_GENTLE_FILL_MULTIPLIER, P_METER_DOWNHILL_STEEP_FILL_MULTIPLIER, downhill_t)
+
+func get_effective_run_speed() -> float:
+	var effective_speed: float = RUN_SPEED
+	var move_dir: float = input_direction if input_direction != 0 else sign(velocity.x)
+	var slope_cap_mul := get_slope_run_cap_multiplier(move_dir)
+	effective_speed *= slope_cap_mul
+	var boost_mul := 1.0
+	# P-speed boost multiplies the current slope-adjusted cap, so boost max speed
+	# also increases downhill and decreases uphill.
+	if is_p_speed_boost_active():
+		boost_mul = (Global.current_level.p_meter_boost_multiplier / 100.0)
+		effective_speed *= boost_mul
+	log_speed_cap("boost" if boost_mul > 1.0 else "run", RUN_SPEED, slope_cap_mul, boost_mul, effective_speed, move_dir)
+	return effective_speed
+
+func get_effective_walk_speed() -> float:
+	var effective_speed: float = WALK_SPEED
+	var move_dir: float = input_direction if input_direction != 0 else sign(velocity.x)
+	var slope_cap_mul := get_slope_run_cap_multiplier(move_dir)
+	effective_speed *= slope_cap_mul
+	log_speed_cap("walk", WALK_SPEED, slope_cap_mul, 1.0, effective_speed, move_dir)
+	return effective_speed
+
+func log_speed_cap(mode: String, base_speed: float, slope_mul: float, boost_mul: float, effective_speed: float, move_dir: float) -> void:
+	# Intentionally muted: using a single horizontal velocity log for focused troubleshooting.
+	return
+
+func get_slope_run_cap_multiplier(move_dir: float) -> float:
+	if not is_actually_on_floor() or move_dir == 0.0:
+		return 1.0
+	var fn := get_floor_normal()
+	var slope_steepness = abs(fn.x)
+	if fn.x * move_dir < 0.0:
+		var uphill_mul := lerpf(1.0, RUN_CAP_UPHILL_MIN_MULTIPLIER, slope_steepness)
+		return uphill_mul
+	if fn.x * move_dir > 0.0:
+		var downhill_mul := lerpf(1.0, RUN_CAP_DOWNHILL_MAX_MULTIPLIER, slope_steepness)
+		return downhill_mul
+	return 1.0
+
+func get_ground_accel_multiplier(move_dir: float) -> float:
+	if not is_actually_on_floor() or move_dir == 0.0:
+		return 1.0
+	var fn := get_floor_normal()
+	var slope_steepness = abs(fn.x)
+	if fn.x * move_dir < 0.0:
+		var accel_mul_uphill := lerpf(1.0, GROUND_ACCEL_UPHILL_MIN_MULTIPLIER, slope_steepness)
+		return accel_mul_uphill
+	if fn.x * move_dir > 0.0:
+		var accel_mul_downhill := lerpf(1.0, GROUND_ACCEL_DOWNHILL_MAX_MULTIPLIER, slope_steepness)
+		return accel_mul_downhill
+	return 1.0
+
+func is_p_speed_boost_active() -> bool:
+	return p_meter >= 1.0 and is_instance_valid(Global.current_level) and Global.current_level.p_meter_enabled and p_speed_debug_speed_boost
+
+func should_stick_to_ground() -> bool:
+	if in_water or flight_meter > 0:
+		return false
+	if ground_snap_jump_lockout_timer > 0.0:
+		return false
+	return ground_snap_floor_grace_timer > 0.0
+
+func update_ground_snap_settings(delta: float) -> void:
+	ground_snap_jump_lockout_timer = max(ground_snap_jump_lockout_timer - delta, 0.0)
+	ground_snap_floor_grace_timer = max(ground_snap_floor_grace_timer - delta, 0.0)
+	if is_actually_on_floor():
+		ground_snap_floor_grace_timer = GROUND_SNAP_FLOOR_GRACE
+	if is_actually_on_floor() and Global.player_action_just_pressed("jump", player_id):
+		ground_snap_jump_lockout_timer = GROUND_SNAP_JUMP_LOCKOUT
+		ground_snap_floor_grace_timer = 0.0
+	floor_snap_length = RUN_GROUND_SNAP_LENGTH if should_stick_to_ground() else 0.0
+	# Log.ln(
+	# 	"snap state: stick={0} snap_len={1} floor={2} grace={3} jump_lockout={4}",
+	# 	should_stick_to_ground(), floor_snap_length, is_actually_on_floor(), snappedf(ground_snap_floor_grace_timer, 0.001), snappedf(ground_snap_jump_lockout_timer, 0.001)
+	# )
+
+func _on_p_speed_boost_start() -> void:
+	if p_speed_debug_boost_sound:
+		AudioManager.play_sfx("power_up", global_position, 1.5)
+	if p_speed_debug_visual_effects:
+		for i in 2:
+			var particle_node = SMOKE_PARTICLE.instantiate()
+			var node = Node2D.new()
+			node.global_position = global_position - Vector2(direction * 8 * (i + 1), 0)
+			node.apply_scale(Vector2(0.25, 0.25))
+			node.add_child(particle_node)
+			add_sibling(node)
+	p_speed_sparkle_timer = 0.0
 
 func damage() -> void:
 	if can_hurt == false or is_invincible:
@@ -863,7 +1148,8 @@ func jump() -> void:
 	has_jumped = true
 
 func calculate_jump_height() -> float: # Thanks wye love you xxx
-	return -(JUMP_HEIGHT + JUMP_INCR * int(abs(velocity.x) / 25))
+	var capped_speed = min(abs(velocity.x), RUN_SPEED) if p_speed_debug_jump_cap else abs(velocity.x)
+	return -(JUMP_HEIGHT + JUMP_INCR * int(capped_speed / 25))
 
 const SMOKE_PARTICLE = preload("res://Scenes/Prefabs/Particles/SmokeParticle.tscn")
 
