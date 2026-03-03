@@ -10,14 +10,15 @@ static var disable := false
 # Prints only when the args change for the same template.
 # Template uses {0}, {1}, ... placeholders (String.format style).
 static func ln(template: String, ...args) -> void:
+	if disable:
+		return
 	var key := _make_args_key(args)
 
 	if (not _last_by_template.has(template)) or (_last_by_template[template] != key):
 		_last_by_template[template] = key
 		_evict_if_needed()
-
-		if not disable:
-			print(template.format(args))
+		
+		print(template.format(args))
 
 static func reset(template: String = "") -> void:
 	if template == "":

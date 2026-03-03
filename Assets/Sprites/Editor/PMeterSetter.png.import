@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://pmeter_setter_png"
-path="res://.godot/imported/PMeterSetter.png-pmeter_setter.ctex"
+uid="uid://c3woty2kj7l77"
+path="res://.godot/imported/PMeterSetter.png-419012e294bccde2f0247d6a89f6461b.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://Assets/Sprites/Editor/PMeterSetter.png"
-dest_files=["res://.godot/imported/PMeterSetter.png-pmeter_setter.ctex"]
+dest_files=["res://.godot/imported/PMeterSetter.png-419012e294bccde2f0247d6a89f6461b.ctex"]
 
 [params]
 

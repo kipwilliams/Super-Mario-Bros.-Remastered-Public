@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://pmeter_toggle_png"
-path="res://.godot/imported/PMeterToggle.png-pmeter_toggle.ctex"
+uid="uid://811tk2qnlon2"
+path="res://.godot/imported/PMeterToggle.png-fb26371d71b90f70312db25a31b25432.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://Assets/Sprites/Editor/PMeterToggle.png"
-dest_files=["res://.godot/imported/PMeterToggle.png-pmeter_toggle.ctex"]
+dest_files=["res://.godot/imported/PMeterToggle.png-fb26371d71b90f70312db25a31b25432.ctex"]
 
 [params]
 
